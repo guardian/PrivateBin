@@ -1,14 +1,16 @@
-# This action is just a test
-name: Snyk (test)
+name: Snyk
 
-on: push
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   security:
     uses: guardian/.github/.github/workflows/sbt-node-snyk.yml@main
     with:
       DEBUG: true
-      ORG: guardian-test
+      ORG: guardian-security
       SKIP_NODE: false
       
       NODE_VERSION_OVERRIDE: 16
