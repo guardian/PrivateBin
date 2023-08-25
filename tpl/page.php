@@ -4,6 +4,7 @@ use PrivateBin\I18n;
 <html lang="<?php echo I18n::_('en'); ?>">
 	<head>
 		<meta charset="utf-8" />
+		<meta http-equiv="Content-Security-Policy" content="<?php echo I18n::encode($CSPHEADER); ?>">
 		<meta name="robots" content="noindex" />
 		<meta name="google" content="notranslate">
 		<title><?php echo I18n::_($NAME); ?></title>
@@ -20,11 +21,11 @@ if ($SYNTAXHIGHLIGHTING):
     endif;
 endif;
 ?>
-		<script type="text/javascript" data-cfasync="false" src="js/jquery-3.4.1.js" integrity="sha512-bnIvzh6FU75ZKxp0GXLH9bewza/OIw6dLVh9ICg0gogclmYGguQJWl8U30WpbsGTqbIiAwxTsbe76DErLq5EDQ==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/jquery-3.7.0.js" integrity="sha512-3gJwYpMe3QewGELv8k/BX9vcqhryRdzRMxVfq6ngyWXwo03GFEzjsUm8Q7RZcHPHksttq7/GFoxjCVUjkjvPdw==" crossorigin="anonymous"></script>
 <?php
 if ($QRCODE):
 ?>
-		<script async type="text/javascript" data-cfasync="false" src="js/kjua-0.6.0.js" integrity="sha512-GEEIHvphDt1NmaxzX8X1ZkBiGKXCv+Ofzwi8SMEH5wQVWqdGIvBO/fnxxKZ90RU1bVp6srS68nHIpZo6iVcG9g==" crossorigin="anonymous"></script>
+		<script async type="text/javascript" data-cfasync="false" src="js/kjua-0.9.0.js" integrity="sha512-CVn7af+vTMBd9RjoS4QM5fpLFEOtBCoB0zPtaqIDC7sF4F8qgUSRFQQpIyEDGsr6yrjbuOLzdf20tkHHmpaqwQ==" crossorigin="anonymous"></script>
 <?php
 endif;
 if ($ZEROBINCOMPATIBILITY):
@@ -33,8 +34,8 @@ if ($ZEROBINCOMPATIBILITY):
 <?php
 endif;
 ?>
-		<script type="text/javascript" data-cfasync="false" src="js/zlib-1.2.11.js" integrity="sha512-Yey/0yoaVmSbqMEyyff3DIu8kCPwpHvHf7tY1AuZ1lrX9NPCMg87PwzngMi+VNbe4ilCApmePeuKT869RTcyCQ==" crossorigin="anonymous"></script>
-		<script type="text/javascript" data-cfasync="false" src="js/base-x-3.0.7.js" integrity="sha512-/Bi1AJIP0TtxEB+Jh6Hk809H1G7vn4iJV80qagslf0+Hm0UjUi1s3qNrn1kZULjzUYuaf6ck0ndLGJ7MxWLmgQ==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/zlib-1.2.13.js" integrity="sha512-Lv4PCbSge8B4odE2blatgggJ/mkX1Ak21e7jL8mY3vzrVHS8FGsrEoqCrizxIJB4sW3T2w5Q+RG7hhUvp7+9tw==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/base-x-4.0.0.js" integrity="sha512-nNPg5IGCwwrveZ8cA/yMGr5HiRS5Ps2H+s0J/mKTPjCPWUgFGGw7M5nqdnPD3VsRwCVysUh3Y8OWjeSKGkEQJQ==" crossorigin="anonymous"></script>
 		<script type="text/javascript" data-cfasync="false" src="js/rawinflate-0.3.js" integrity="sha512-g8uelGgJW9A/Z1tB6Izxab++oj5kdD7B4qC7DHwZkB6DGMXKyzx7v5mvap2HXueI2IIn08YlRYM56jwWdm2ucQ==" crossorigin="anonymous"></script>
 <?php
 if ($SYNTAXHIGHLIGHTING):
@@ -44,13 +45,14 @@ if ($SYNTAXHIGHLIGHTING):
 endif;
 if ($MARKDOWN):
 ?>
-		<script type="text/javascript" data-cfasync="false" src="js/showdown-1.9.1.js" integrity="sha512-nRri7kqh3iRLdHbhtjfe8w9eAQPmt+ubH5U88UZyKbz6O9Q0q4haaXF0krOUclKmRJou/kKZYulgBHvHXPqOvg==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/showdown-2.1.0.js" integrity="sha512-WYXZgkTR0u/Y9SVIA4nTTOih0kXMEd8RRV6MLFdL6YU8ymhR528NLlYQt1nlJQbYz4EW+ZsS0fx1awhiQJme1Q==" crossorigin="anonymous"></script>
 <?php
 endif;
 ?>
-		<script type="text/javascript" data-cfasync="false" src="js/purify-2.0.8.js" integrity="sha512-QwcEKGuEmKtMguCO9pqNtUtZqq9b/tJ8gNr5qhY8hykq3zKTlDOvpZAmf6Rs8yH35Bz1ZdctUjj2qEWxT5aXCg==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/purify-3.0.4.js" integrity="sha512-N7H+3ylaOUeKuTX57cZoa42hqaG5w1rchG/IP9+BHd48W/vESgPDpb5QuDqzJE1dZhrGVCQgU8peIQGHmdGFhQ==" crossorigin="anonymous"></script>
 		<script type="text/javascript" data-cfasync="false" src="js/legacy.js?<?php echo rawurlencode($VERSION); ?>" integrity="sha512-LYos+qXHIRqFf5ZPNphvtTB0cgzHUizu2wwcOwcwz/VIpRv9lpcBgPYz4uq6jx0INwCAj6Fbnl5HoKiLufS2jg==" crossorigin="anonymous"></script>
-		<script type="text/javascript" data-cfasync="false" src="js/privatebin.js?<?php echo rawurlencode($VERSION); ?>" integrity="sha512-5GFThJ8KstWT1bNvB5JTAAXA+5QCNDv21foF7hSNoAc0oOxrHiUCP1ZlZs9zk4SbdIsmTSGL12Ecdj5CRISYxg==" crossorigin="anonymous"></script>
+		<script type="text/javascript" data-cfasync="false" src="js/privatebin.js?<?php echo rawurlencode($VERSION); ?>" integrity="sha512-PDohiS3326HlXcagz8Q2xejgrixZP/LD9/fTbOygHiunBSyCxhqakMOYQ8NrS5J8EozG7GRaZ1yUUr5URH1WZQ==" crossorigin="anonymous"></script>
+		<!-- icon -->
 		<link rel="apple-touch-icon" href="img/apple-touch-icon.png?<?php echo rawurlencode($VERSION); ?>" sizes="180x180" />
 		<link rel="icon" type="image/png" href="img/favicon-32x32.png?<?php echo rawurlencode($VERSION); ?>" sizes="32x32" />
 		<link rel="icon" type="image/png" href="img/favicon-16x16.png?<?php echo rawurlencode($VERSION); ?>" sizes="16x16" />
@@ -59,11 +61,30 @@ endif;
 		<link rel="shortcut icon" href="img/favicon.ico">
 		<meta name="msapplication-config" content="browserconfig.xml">
 		<meta name="theme-color" content="#ffe57e" />
+		<!-- Twitter/social media cards -->
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content="<?php echo I18n::_('Encrypted note on %s', I18n::_($NAME)) ?>" />
+		<meta name="twitter:description" content="<?php echo I18n::_('Visit this link to see the note. Giving the URL to anyone allows them to access the note, too.') ?>" />
+		<meta name="twitter:image" content="img/apple-touch-icon.png?<?php echo rawurlencode($VERSION); ?>" />
+		<meta property="og:title" content="<?php echo I18n::_($NAME); ?>" />
+		<meta property="og:site_name" content="<?php echo I18n::_($NAME); ?>" />
+		<meta property="og:description" content="<?php echo I18n::_('Visit this link to see the note. Giving the URL to anyone allows them to access the note, too.') ?>" />
+		<meta property="og:image" content="img/apple-touch-icon.png?<?php echo rawurlencode($VERSION); ?>" />
+		<meta property="og:image:type" content="image/png" />
+		<meta property="og:image:width" content="180" />
+		<meta property="og:image:height" content="180" />
 	</head>
 	<body data-compression="<?php echo rawurlencode($COMPRESSION); ?>">
 		<header>
 			<div id="aboutbox">
-				<?php echo I18n::_('%s is a minimalist, open source online pastebin where the server has zero knowledge of pasted data. Data is encrypted/decrypted <i>in the browser</i> using 256 bits AES. More information on the <a href="https://privatebin.info/">project page</a>.', I18n::_($NAME)); ?><br />
+				<?php echo sprintf(
+                    I18n::_('%s is a minimalist, open source online pastebin where the server has zero knowledge of pasted data. Data is encrypted/decrypted %sin the browser%s using 256 bits AES.',
+                        I18n::_($NAME),
+                        '%s', '%s'
+                    ),
+                    '<i>', '</i>'), ' ', $INFO;
+                ?>
+				<br />
 <?php
 if (strlen($NOTICE)):
 ?>
@@ -107,6 +128,7 @@ endif;
 					<button id="sendbutton" class="hidden"><img src="img/icon_send.png" width="18" height="15" alt="" /><?php echo I18n::_('Send'); ?></button>
 					<button id="clonebutton" class="hidden"><img src="img/icon_clone.png" width="15" height="17" alt="" /><?php echo I18n::_('Clone'); ?></button>
 					<button id="rawtextbutton" class="hidden"><img src="img/icon_raw.png" width="15" height="15" alt="" /><?php echo I18n::_('Raw text'); ?></button>
+					<button id="downloadtextbutton" class="hidden"><?php echo I18n::_('Save paste'), PHP_EOL; ?></button>
 					<button id="emaillink" class="hidden"><img src="img/icon_email.png" width="15" height="15" alt="" /><?php echo I18n::_('Email'); ?></button>
 <?php
 if ($QRCODE):

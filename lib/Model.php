@@ -7,7 +7,7 @@
  * @link      https://github.com/PrivateBin/PrivateBin
  * @copyright 2012 Sébastien SAUVAGE (sebsauvage.net)
  * @license   https://www.opensource.org/licenses/zlib-license.php The zlib/libpng License
- * @version   1.3.3
+ * @version   1.5.2
  */
 
 namespace PrivateBin;
@@ -54,7 +54,7 @@ class Model
      */
     public function getPaste($pasteId = null)
     {
-        $paste = new Paste($this->_conf, $this->_getStore());
+        $paste = new Paste($this->_conf, $this->getStore());
         if ($pasteId !== null) {
             $paste->setId($pasteId);
         }
@@ -67,8 +67,9 @@ class Model
     public function purge()
     {
         PurgeLimiter::setConfiguration($this->_conf);
+        PurgeLimiter::setStore($this->getStore());
         if (PurgeLimiter::canPurge()) {
-            $this->_getStore()->purge($this->_conf->getKey('batchsize', 'purge'));
+            $this->getStore()->purge($this->_conf->getKey('batchsize', 'purge'));
         }
     }
 
@@ -77,13 +78,11 @@ class Model
      *
      * @return Data\AbstractData
      */
-    private function _getStore()
+    public function getStore()
     {
         if ($this->_store === null) {
-            $this->_store = forward_static_call(
-                'PrivateBin\\Data\\' . $this->_conf->getKey('class', 'model') . '::getInstance',
-                $this->_conf->getSection('model_options')
-            );
+            $class        = 'PrivateBin\\Data\\' . $this->_conf->getKey('class', 'model');
+            $this->_store = new $class($this->_conf->getSection('model_options'));
         }
         return $this->_store;
     }

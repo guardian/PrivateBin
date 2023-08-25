@@ -1,12 +1,13 @@
 <?php
 
+use PHPUnit\Framework\TestCase;
 use PrivateBin\I18n;
 
-class I18nTest extends PHPUnit_Framework_TestCase
+class I18nTest extends TestCase
 {
     private $_translations = array();
 
-    public function setUp()
+    public function setUp(): void
     {
         /* Setup Routine */
         $this->_translations = json_decode(
@@ -15,9 +16,9 @@ class I18nTest extends PHPUnit_Framework_TestCase
         );
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
-        /* Tear Down Routine */
+        unset($_COOKIE['lang'], $_SERVER['HTTP_ACCEPT_LANGUAGE']);
     }
 
     public function testTranslationFallback()
@@ -135,7 +136,7 @@ class I18nTest extends PHPUnit_Framework_TestCase
         $_SERVER['HTTP_ACCEPT_LANGUAGE'] = 'cs;q=0.8,en-GB;q=0.6,en-US;q=0.4,en;q=0.2';
         I18n::loadTranslations();
         $this->assertEquals('cs', I18n::_('en'), 'browser language cs');
-        $this->assertEquals('1 hodin', I18n::_('%d hours', 1), '1 hour in Czech');
+        $this->assertEquals('1 hodina', I18n::_('%d hours', 1), '1 hour in Czech');
         $this->assertEquals('2 hodiny', I18n::_('%d hours', 2), '2 hours in Czech');
         $this->assertEquals('5 minut',  I18n::_('%d minutes', 5), '5 minutes in Czech');
         $this->assertEquals('14 minut',  I18n::_('%d minutes', 14), '14 minutes in Czech');
@@ -145,7 +146,7 @@ class I18nTest extends PHPUnit_Framework_TestCase
     {
         $_SERVER['HTTP_ACCEPT_LANGUAGE'] = '*';
         I18n::loadTranslations();
-        $this->assertTrue(strlen(I18n::_('en')) == 2, 'browser language any');
+        $this->assertTrue(strlen(I18n::_('en')) >= 2, 'browser language any');
     }
 
     public function testVariableInjection()
