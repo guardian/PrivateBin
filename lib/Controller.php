@@ -7,7 +7,7 @@
  * @link      https://github.com/PrivateBin/PrivateBin
  * @copyright 2012 Sébastien SAUVAGE (sebsauvage.net)
  * @license   https://www.opensource.org/licenses/zlib-license.php The zlib/libpng License
- * @version   1.3.3
+ * @version   1.5.2
  */
 
 namespace PrivateBin;
@@ -28,14 +28,14 @@ class Controller
      *
      * @const string
      */
-    const VERSION = '1.3.3';
+    const VERSION = '1.5.2';
 
     /**
      * minimal required PHP version
      *
      * @const string
      */
-    const MIN_PHP_VERSION = '5.6.0';
+    const MIN_PHP_VERSION = '7.3.0';
 
     /**
      * show the same error message if the paste expired or does not exist
@@ -136,6 +136,9 @@ class Controller
             case 'jsonld':
                 $this->_jsonld($this->_request->getParam('jsonld'));
                 return;
+            case 'yourlsproxy':
+                $this->_yourlsproxy($this->_request->getParam('link'));
+                break;
         }
 
         // output JSON or HTML
@@ -162,7 +165,6 @@ class Controller
         $this->_model   = new Model($this->_conf);
         $this->_request = new Request;
         $this->_urlBase = $this->_request->getRequestUri();
-        ServerSalt::setPath($this->_conf->getKey('dir', 'traffic'));
 
         // set default language
         $lang = $this->_conf->getKey('languagedefault');
@@ -170,7 +172,7 @@ class Controller
         // force default language, if language selection is disabled and a default is set
         if (!$this->_conf->getKey('languageselection') && strlen($lang) == 2) {
             $_COOKIE['lang'] = $lang;
-            setcookie('lang', $lang);
+            setcookie('lang', $lang, 0, '', '', true);
         }
     }
 
@@ -197,14 +199,13 @@ class Controller
     private function _create()
     {
         // Ensure last paste from visitors IP address was more than configured amount of seconds ago.
+        ServerSalt::setStore($this->_model->getStore());
         TrafficLimiter::setConfiguration($this->_conf);
-        if (!TrafficLimiter::canPass()) {
-            $this->_return_message(
-                1, I18n::_(
-                    'Please wait %d seconds between each post.',
-                    $this->_conf->getKey('limit', 'traffic')
-                )
-            );
+        TrafficLimiter::setStore($this->_model->getStore());
+        try {
+            TrafficLimiter::canPass();
+        } catch (Exception $e) {
+            $this->_return_message(1, $e->getMessage());
             return;
         }
 
@@ -341,10 +342,17 @@ class Controller
         header('Last-Modified: ' . $time);
         header('Vary: Accept');
         header('Content-Security-Policy: ' . $this->_conf->getKey('cspheader'));
+        header('Cross-Origin-Resource-Policy: same-origin');
+        header('Cross-Origin-Embedder-Policy: require-corp');
+        // disabled, because it prevents links from a paste to the same site to
+        // be opened. Didn't work with `same-origin-allow-popups` either.
+        // See issue https://github.com/PrivateBin/PrivateBin/issues/970 for details.
+        // header('Cross-Origin-Opener-Policy: same-origin');
+        header('Permissions-Policy: browsing-topics=()');
         header('Referrer-Policy: no-referrer');
-        header('X-Xss-Protection: 1; mode=block');
-        header('X-Frame-Options: DENY');
         header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: deny');
+        header('X-XSS-Protection: 1; mode=block');
 
         // label all the expiration options
         $expire = array();
@@ -359,12 +367,29 @@ class Controller
         $languageselection = '';
         if ($this->_conf->getKey('languageselection')) {
             $languageselection = I18n::getLanguage();
-            setcookie('lang', $languageselection);
+            setcookie('lang', $languageselection, 0, '', '', true);
         }
 
+        // strip policies that are unsupported in meta tag
+        $metacspheader = str_replace(
+            array(
+                'frame-ancestors \'none\'; ',
+                '; sandbox allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads',
+            ),
+            '',
+            $this->_conf->getKey('cspheader')
+        );
+
         $page = new View;
-        $page->assign('NAME', $this->_conf->getKey('name'));
+        $page->assign('CSPHEADER', $metacspheader);
         $page->assign('ERROR', I18n::_($this->_error));
+        $page->assign('NAME', $this->_conf->getKey('name'));
+        if ($this->_request->getOperation() === 'yourlsproxy') {
+            $page->assign('SHORTURL', $this->_status);
+            $page->draw('yourlsproxy');
+            return;
+        }
+        $page->assign('BASEPATH', I18n::_($this->_conf->getKey('basepath')));
         $page->assign('STATUS', I18n::_($this->_status));
         $page->assign('VERSION', self::VERSION);
         $page->assign('DISCUSSION', $this->_conf->getKey('discussion'));
@@ -374,6 +399,7 @@ class Controller
         $page->assign('SYNTAXHIGHLIGHTINGTHEME', $this->_conf->getKey('syntaxhighlightingtheme'));
         $page->assign('FORMATTER', $formatters);
         $page->assign('FORMATTERDEFAULT', $this->_conf->getKey('defaultformatter'));
+        $page->assign('INFO', I18n::_(str_replace("'", '"', $this->_conf->getKey('info'))));
         $page->assign('NOTICE', I18n::_($this->_conf->getKey('notice')));
         $page->assign('BURNAFTERREADINGSELECTED', $this->_conf->getKey('burnafterreadingselected'));
         $page->assign('PASSWORD', $this->_conf->getKey('password'));
@@ -399,10 +425,13 @@ class Controller
      */
     private function _jsonld($type)
     {
-        if (
-            $type !== 'paste' && $type !== 'comment' &&
-            $type !== 'pastemeta' && $type !== 'commentmeta'
-        ) {
+        if (!in_array($type, array(
+            'comment',
+            'commentmeta',
+            'paste',
+            'pastemeta',
+            'types',
+        ))) {
             $type = '';
         }
         $content = '{}';
@@ -414,11 +443,34 @@ class Controller
                 file_get_contents($file)
             );
         }
+        if ($type === 'types') {
+            $content = str_replace(
+                implode('", "', array_keys($this->_conf->getDefaults()['expire_options'])),
+                implode('", "', array_keys($this->_conf->getSection('expire_options'))),
+                $content
+            );
+        }
 
         header('Content-type: application/ld+json');
         header('Access-Control-Allow-Origin: *');
         header('Access-Control-Allow-Methods: GET');
         echo $content;
+    }
+
+    /**
+     * proxies link to YOURLS, updates status or error with response
+     *
+     * @access private
+     * @param string $link
+     */
+    private function _yourlsproxy($link)
+    {
+        $yourls = new YourlsProxy($this->_conf, $link);
+        if ($yourls->isError()) {
+            $this->_error = $yourls->getError();
+        } else {
+            $this->_status = $yourls->getUrl();
+        }
     }
 
     /**

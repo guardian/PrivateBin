@@ -1,26 +1,29 @@
 <?php
 
+use PHPUnit\Framework\TestCase;
 use PrivateBin\Controller;
 use PrivateBin\Data\Filesystem;
 use PrivateBin\Persistence\ServerSalt;
 use PrivateBin\Persistence\TrafficLimiter;
 use PrivateBin\Request;
 
-class ControllerTest extends PHPUnit_Framework_TestCase
+class ControllerTest extends TestCase
 {
     protected $_data;
 
     protected $_path;
 
-    public function setUp()
+    public function setUp(): void
     {
         /* Setup Routine */
         $this->_path  = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'privatebin_data';
-        $this->_data  = Filesystem::getInstance(array('dir' => $this->_path));
+        $this->_data  = new Filesystem(array('dir' => $this->_path));
+        ServerSalt::setStore($this->_data);
+        TrafficLimiter::setStore($this->_data);
         $this->reset();
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         /* Tear Down Routine */
         unlink(CONF);
@@ -37,11 +40,8 @@ class ControllerTest extends PHPUnit_Framework_TestCase
             $this->_data->delete(Helper::getPasteId());
         }
         $options                         = parse_ini_file(CONF_SAMPLE, true);
-        $options['purge']['dir']         = $this->_path;
-        $options['traffic']['dir']       = $this->_path;
         $options['model_options']['dir'] = $this->_path;
         Helper::createIniFile(CONF, $options);
-        ServerSalt::setPath($this->_path);
     }
 
     /**
@@ -49,19 +49,27 @@ class ControllerTest extends PHPUnit_Framework_TestCase
      */
     public function testView()
     {
+        $_SERVER['HTTP_HOST']             = 'example.com';
+        $_SERVER['QUERY_STRING']          = Helper::getPasteId();
+        $_GET[Helper::getPasteId()]       = '';
         ob_start();
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertContains(
+        $this->assertStringContainsString(
             '<title>PrivateBin</title>',
             $content,
             'outputs title correctly'
         );
-        $this->assertNotContains(
+        $this->assertStringNotContainsString(
             'id="shortenbutton"',
             $content,
             'doesn\'t output shortener button'
+        );
+        $this->assertMatchesRegularExpression(
+            '# href="https://' . preg_quote($_SERVER['HTTP_HOST']) . '/">switching to HTTPS#',
+            $content,
+            'outputs configured https URL correctly'
         );
     }
 
@@ -78,7 +86,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertContains(
+        $this->assertStringContainsString(
             '<title>PrivateBin</title>',
             $content,
             'outputs title correctly'
@@ -99,7 +107,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertContains(
+        $this->assertStringContainsString(
             '<title>PrivateBin</title>',
             $content,
             'outputs title correctly'
@@ -120,33 +128,11 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#id="shortenbutton"[^>]*data-shortener="' . preg_quote($shortener) . '"#',
             $content,
             'outputs configured shortener URL correctly'
         );
-    }
-
-    /**
-     * @runInSeparateProcess
-     */
-    public function testHtaccess()
-    {
-        $htaccess = $this->_path . DIRECTORY_SEPARATOR . '.htaccess';
-        @unlink($htaccess);
-
-        $paste = Helper::getPasteJson();
-        $file  = tempnam(sys_get_temp_dir(), 'FOO');
-        file_put_contents($file, $paste);
-        Request::setInputStream($file);
-        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'JSONHttpRequest';
-        $_SERVER['REQUEST_METHOD']        = 'POST';
-        $_SERVER['REMOTE_ADDR']           = '::1';
-        ob_start();
-        new Controller;
-        ob_end_clean();
-
-        $this->assertFileExists($htaccess, 'htaccess recreated');
     }
 
     /**
@@ -156,6 +142,8 @@ class ControllerTest extends PHPUnit_Framework_TestCase
     public function testConf()
     {
         file_put_contents(CONF, '');
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(2);
         new Controller;
     }
 
@@ -451,8 +439,6 @@ class ControllerTest extends PHPUnit_Framework_TestCase
      * silently removed, check that this case is handled
      *
      * @runInSeparateProcess
-     * @expectedException Exception
-     * @expectedExceptionCode 90
      */
     public function testCreateBrokenUpload()
     {
@@ -464,7 +450,12 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         $_SERVER['REQUEST_METHOD']        = 'POST';
         $_SERVER['REMOTE_ADDR']           = '::1';
         $this->assertFalse($this->_data->exists(Helper::getPasteId()), 'paste does not exists before posting data');
+        ob_start();
         new Controller;
+        $content = ob_get_contents();
+        ob_end_clean();
+        $response = json_decode($content, true);
+        $this->assertEquals(1, $response['status'], 'outputs error status');
         $this->assertFalse($this->_data->exists(Helper::getPasteId()), 'paste exists after posting data');
     }
 
@@ -484,6 +475,29 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         ob_end_clean();
         $this->_data->delete(Helper::getPasteId());
+        ob_start();
+        new Controller;
+        $content = ob_get_contents();
+        ob_end_clean();
+        $response = json_decode($content, true);
+        $this->assertEquals(1, $response['status'], 'outputs error status');
+        $this->assertFalse($this->_data->exists(Helper::getPasteId()), 'paste exists after posting data');
+    }
+
+    /**
+     * @runInSeparateProcess
+     */
+    public function testCreateInvalidFormat()
+    {
+        $options                     = parse_ini_file(CONF, true);
+        $options['traffic']['limit'] = 0;
+        Helper::createIniFile(CONF, $options);
+        $file = tempnam(sys_get_temp_dir(), 'FOO');
+        file_put_contents($file, Helper::getPasteJson(1));
+        Request::setInputStream($file);
+        $_SERVER['HTTP_X_REQUESTED_WITH'] = 'JSONHttpRequest';
+        $_SERVER['REQUEST_METHOD']        = 'POST';
+        $_SERVER['REMOTE_ADDR']           = '::1';
         ob_start();
         new Controller;
         $content = ob_get_contents();
@@ -541,7 +555,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         ob_end_clean();
         $response = json_decode($content, true);
         $this->assertEquals(1, $response['status'], 'outputs error status');
-        $this->assertFalse($this->_data->existsComment(Helper::getPasteId(), Helper::getPasteId(), Helper::getCommentId()), 'paste exists after posting data');
+        $this->assertFalse($this->_data->existsComment(Helper::getPasteId(), Helper::getPasteId(), Helper::getCommentId()), 'comment exists after posting data');
     }
 
     /**
@@ -798,7 +812,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="status"[^>]*>.*Paste was properly deleted\.#s',
             $content,
             'outputs deleted status correctly'
@@ -818,7 +832,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="errormessage"[^>]*>.*Invalid paste ID\.#s',
             $content,
             'outputs delete error correctly'
@@ -837,7 +851,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="errormessage"[^>]*>.*Paste does not exist, has expired or has been deleted\.#s',
             $content,
             'outputs delete error correctly'
@@ -856,7 +870,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="errormessage"[^>]*>.*Wrong deletion token\. Paste was not deleted\.#s',
             $content,
             'outputs delete error correctly'
@@ -904,7 +918,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="errormessage"[^>]*>.*Paste does not exist, has expired or has been deleted\.#s',
             $content,
             'outputs error correctly'
@@ -927,7 +941,7 @@ class ControllerTest extends PHPUnit_Framework_TestCase
         new Controller;
         $content = ob_get_contents();
         ob_end_clean();
-        $this->assertRegExp(
+        $this->assertMatchesRegularExpression(
             '#<div[^>]*id="status"[^>]*>.*Paste was properly deleted\.#s',
             $content,
             'outputs deleted status correctly'

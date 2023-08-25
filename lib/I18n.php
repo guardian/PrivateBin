@@ -7,7 +7,7 @@
  * @link      https://github.com/PrivateBin/PrivateBin
  * @copyright 2012 Sébastien SAUVAGE (sebsauvage.net)
  * @license   https://www.opensource.org/licenses/zlib-license.php The zlib/libpng License
- * @version   1.3.3
+ * @version   1.5.2
  */
 
 namespace PrivateBin;
@@ -84,7 +84,7 @@ class I18n
      */
     public static function _($messageId)
     {
-        return forward_static_call_array('self::translate', func_get_args());
+        return forward_static_call_array('PrivateBin\I18n::translate', func_get_args());
     }
 
     /**
@@ -195,11 +195,10 @@ class I18n
         if (count(self::$_availableLanguages) == 0) {
             $i18n = dir(self::_getPath());
             while (false !== ($file = $i18n->read())) {
-                if (preg_match('/^([a-z]{2}).json$/', $file, $match) === 1) {
+                if (preg_match('/^([a-z]{2,3}).json$/', $file, $match) === 1) {
                     self::$_availableLanguages[] = $match[1];
                 }
             }
-            self::$_availableLanguages[] = 'en';
         }
         return self::$_availableLanguages;
     }
@@ -306,7 +305,7 @@ class I18n
     /**
      * determines the plural form to use based on current language and given number
      *
-     * From: http://localization-guide.readthedocs.org/en/latest/l10n/pluralforms.html
+     * From: https://docs.translatehouse.org/projects/localization-guide/en/latest/l10n/pluralforms.html
      *
      * @access protected
      * @static
@@ -316,22 +315,36 @@ class I18n
     protected static function _getPluralForm($n)
     {
         switch (self::$_language) {
+            case 'ar':
+                return $n === 0 ? 0 : ($n === 1 ? 1 : ($n === 2 ? 2 : ($n % 100 >= 3 && $n % 100 <= 10 ? 3 : ($n % 100 >= 11 ? 4 : 5))));
             case 'cs':
-                return $n == 1 ? 0 : ($n >= 2 && $n <= 4 ? 1 : 2);
+            case 'sk':
+                return $n === 1 ? 0 : ($n >= 2 && $n <= 4 ? 1 : 2);
+            case 'co':
             case 'fr':
             case 'oc':
+            case 'tr':
             case 'zh':
                 return $n > 1 ? 1 : 0;
+            case 'he':
+                return $n === 1 ? 0 : ($n === 2 ? 1 : (($n < 0 || $n > 10) && ($n % 10 === 0) ? 2 : 3));
+            case 'id':
+            case 'ja':
+            case 'jbo':
+            case 'th':
+                return 0;
+            case 'lt':
+                return $n % 10 === 1 && $n % 100 !== 11 ? 0 : (($n % 10 >= 2 && $n % 100 < 10 || $n % 100 >= 20) ? 1 : 2);
             case 'pl':
-                return $n == 1 ? 0 : ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 10 || $n % 100 >= 20) ? 1 : 2);
+                return $n === 1 ? 0 : ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 10 || $n % 100 >= 20) ? 1 : 2);
             case 'ru':
             case 'uk':
-                return $n % 10 == 1 && $n % 100 != 11 ? 0 : ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 10 || $n % 100 >= 20) ? 1 : 2);
+                return $n % 10 === 1 && $n % 100 != 11 ? 0 : ($n % 10 >= 2 && $n % 10 <= 4 && ($n % 100 < 10 || $n % 100 >= 20) ? 1 : 2);
             case 'sl':
-                return $n % 100 == 1 ? 1 : ($n % 100 == 2 ? 2 : ($n % 100 == 3 || $n % 100 == 4 ? 3 : 0));
-            // bg, de, en, es, hu, it, nl, no, pt
+                return $n % 100 === 1 ? 1 : ($n % 100 === 2 ? 2 : ($n % 100 === 3 || $n % 100 === 4 ? 3 : 0));
             default:
-                return $n != 1 ? 1 : 0;
+                // bg, ca, de, el, en, es, et, fi, hu, it, nl, no, pt
+                return $n !== 1 ? 1 : 0;
         }
     }
 

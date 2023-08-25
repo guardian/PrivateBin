@@ -6,7 +6,7 @@ cfg/*
 !cfg/.htaccess
 
 # Ignore data/
-data/
+/data/
 
 # Ignore PhpDoc
 doc/*
@@ -31,8 +31,11 @@ js/node_modules/
 js/test.log
 tst/log/
 tst/ConfigurationCombinationsTest.php
+tst/.phpunit.result.cache
 .settings
 .buildpath
 .project
 .externalToolBuilders
 .c9
+/.idea/
+*.iml

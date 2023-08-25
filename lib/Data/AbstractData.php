@@ -7,7 +7,7 @@
  * @link      https://github.com/PrivateBin/PrivateBin
  * @copyright 2012 Sébastien SAUVAGE (sebsauvage.net)
  * @license   https://www.opensource.org/licenses/zlib-license.php The zlib/libpng License
- * @version   1.3.3
+ * @version   1.5.2
  */
 
 namespace PrivateBin\Data;
@@ -15,52 +15,17 @@ namespace PrivateBin\Data;
 /**
  * AbstractData
  *
- * Abstract model for PrivateBin data access, implemented as a singleton.
+ * Abstract model for data access
  */
 abstract class AbstractData
 {
     /**
-     * singleton instance
+     * cache for the traffic limiter
      *
      * @access protected
-     * @static
-     * @var AbstractData
+     * @var    array
      */
-    protected static $_instance = null;
-
-    /**
-     * enforce singleton, disable constructor
-     *
-     * Instantiate using {@link getInstance()}, privatebin is a singleton object.
-     *
-     * @access protected
-     */
-    protected function __construct()
-    {
-    }
-
-    /**
-     * enforce singleton, disable cloning
-     *
-     * Instantiate using {@link getInstance()}, privatebin is a singleton object.
-     *
-     * @access private
-     */
-    private function __clone()
-    {
-    }
-
-    /**
-     * get instance of singleton
-     *
-     * @access public
-     * @static
-     * @param  array $options
-     * @return AbstractData
-     */
-    public static function getInstance(array $options)
-    {
-    }
+    protected $_last_cache = array();
 
     /**
      * Create a paste.
@@ -131,6 +96,46 @@ abstract class AbstractData
     abstract public function existsComment($pasteid, $parentid, $commentid);
 
     /**
+     * Purge outdated entries.
+     *
+     * @access public
+     * @param  string $namespace
+     * @param  int $time
+     * @return void
+     */
+    public function purgeValues($namespace, $time)
+    {
+        if ($namespace === 'traffic_limiter') {
+            foreach ($this->_last_cache as $key => $last_submission) {
+                if ($last_submission <= $time) {
+                    unset($this->_last_cache[$key]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Save a value.
+     *
+     * @access public
+     * @param  string $value
+     * @param  string $namespace
+     * @param  string $key
+     * @return bool
+     */
+    abstract public function setValue($value, $namespace, $key = '');
+
+    /**
+     * Load a value.
+     *
+     * @access public
+     * @param  string $namespace
+     * @param  string $key
+     * @return string
+     */
+    abstract public function getValue($namespace, $key = '');
+
+    /**
      * Returns up to batch size number of paste ids that have expired
      *
      * @access protected
@@ -157,6 +162,14 @@ abstract class AbstractData
             }
         }
     }
+
+    /**
+     * Returns all paste ids
+     *
+     * @access public
+     * @return array
+     */
+    abstract public function getAllPastes();
 
     /**
      * Get next free slot for comment from postdate.

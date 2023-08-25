@@ -1,9 +1,10 @@
 <?php
 
+use PHPUnit\Framework\TestCase;
 use PrivateBin\I18n;
 use PrivateBin\View;
 
-class ViewTest extends PHPUnit_Framework_TestCase
+class ViewTest extends TestCase
 {
     private static $error = 'foo bar';
 
@@ -29,11 +30,12 @@ class ViewTest extends PHPUnit_Framework_TestCase
 
     private $_content = array();
 
-    public function setUp()
+    public function setUp(): void
     {
         /* Setup Routine */
         $page = new View;
         $page->assign('NAME', 'PrivateBinTest');
+        $page->assign('BASEPATH', '');
         $page->assign('ERROR', self::$error);
         $page->assign('STATUS', self::$status);
         $page->assign('VERSION', self::$version);
@@ -48,6 +50,7 @@ class ViewTest extends PHPUnit_Framework_TestCase
         $page->assign('PASSWORD', true);
         $page->assign('FILEUPLOAD', false);
         $page->assign('ZEROBINCOMPATIBILITY', false);
+        $page->assign('INFO', 'example');
         $page->assign('NOTICE', 'example');
         $page->assign('LANGUAGESELECTION', '');
         $page->assign('LANGUAGES', I18n::getLanguageLabels(I18n::getAvailableLanguages()));
@@ -58,6 +61,7 @@ class ViewTest extends PHPUnit_Framework_TestCase
         $page->assign('HTTPWARNING', true);
         $page->assign('HTTPSLINK', 'https://example.com/');
         $page->assign('COMPRESSION', 'zlib');
+        $page->assign('CSPHEADER', 'default-src \'none\'');
 
         $dir = dir(PATH . 'tpl');
         while (false !== ($file = $dir->read())) {
@@ -90,36 +94,35 @@ class ViewTest extends PHPUnit_Framework_TestCase
         }
     }
 
-    public function tearDown()
-    {
-        /* Tear Down Routine */
-    }
-
     public function testTemplateRendersCorrectly()
     {
         foreach ($this->_content as $template => $content) {
-            $this->assertRegExp(
+            $this->assertMatchesRegularExpression(
                 '#<div[^>]+id="errormessage"[^>]*>.*' . self::$error . '#s',
                 $content,
                 $template . ': outputs error correctly'
             );
-            $this->assertRegExp(
+            if ($template === 'yourlsproxy') {
+                // yourlsproxy template only displays error message
+                continue;
+            }
+            $this->assertMatchesRegularExpression(
                 '#<[^>]+id="password"[^>]*>#',
                 $content,
                 $template . ': password available if configured'
             );
-            $this->assertRegExp(
+            $this->assertMatchesRegularExpression(
                 '#<input[^>]+id="opendiscussion"[^>]*checked="checked"[^>]*>#',
                 $content,
                 $template . ': checked discussion if configured'
             );
-            $this->assertRegExp(
+            $this->assertMatchesRegularExpression(
                 '#<[^>]+id="opendiscussionoption"[^>]*>#',
                 $content,
                 $template . ': discussions available if configured'
             );
             // testing version number in JS address, since other instances may not be present in different templates
-            $this->assertRegExp(
+            $this->assertMatchesRegularExpression(
                 '#<script[^>]+src="js/privatebin.js\\?' . rawurlencode(self::$version) . '"[^>]*>#',
                 $content,
                 $template . ': outputs version correctly'
@@ -127,13 +130,11 @@ class ViewTest extends PHPUnit_Framework_TestCase
         }
     }
 
-    /**
-     * @expectedException Exception
-     * @expectedExceptionCode 80
-     */
     public function testMissingTemplate()
     {
         $test = new View;
+        $this->expectException(Exception::class);
+        $this->expectExceptionCode(80);
         $test->draw('123456789 does not exist!');
     }
 }
