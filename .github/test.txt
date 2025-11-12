@@ -1,0 +1,8 @@
+
+name: Require CORE4 label for PRs prior to merge
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize, reopened, edited]
+jobs:
+  require-label:
+    uses: guardian/product-and-engineering-metrics/.github/workflows/require-label.yml@main
